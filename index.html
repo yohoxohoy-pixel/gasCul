@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GasCul</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    /* No vertical scroll */
+    body {
+      overflow: hidden;
+      height: 100vh;
+      background-color: #f8f9fa;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    /* Loading Overlay with light white background */
+    #loadingOverlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: rgba(255, 255, 255, 0.8);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      display: none;
+    }
+    
+    .container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      max-width: 500px;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="loadingOverlay">
+    <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+  </div>
+
+  <div class="container p-4">
+    <h1 class="text-center mb-4">GasCul</h1>
+
+    <div class="card mb-4 shadow-sm">
+      <div class="card-body">
+        <h5 class="card-title text-secondary">Dashboard</h5>
+        <div class="d-flex justify-content-between align-items-center mb-2 mt-3">
+          <span class="fs-5">Last Month:</span>
+          <span class="fs-4 fw-bold text-dark">¥<span id="lastMonthTotal">0</span></span>
+        </div>
+        <hr>
+        <div class="d-flex justify-content-between align-items-center">
+          <span class="fs-5">This Month:</span>
+          <span class="fs-4 fw-bold text-primary">¥<span id="thisMonthTotal">0</span></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <form id="gasForm">
+          <div class="mb-3">
+            <label for="amountInput" class="form-label">Gasoline Amount (JPY)</label>
+            <input type="number" class="form-control form-control-lg" id="amountInput" placeholder="Enter amount" required>
+          </div>
+          <button type="submit" class="btn btn-primary btn-lg w-100" id="submitBtn">Submit</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- Configuration ---
+    // REPLACE THIS URL WITH YOUR DEPLOYED GAS WEB APP URL
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbxxHnvUOWhLUs7NuxwQEFAIX6Xs-aiwUjVVBym4P24b1iSGayMqA7NMMJBGXlYlQLvS/exec';
+
+    // --- DOM Elements ---
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    const lastMonthTotalEl = document.getElementById('lastMonthTotal');
+    const thisMonthTotalEl = document.getElementById('thisMonthTotal');
+    const gasForm = document.getElementById('gasForm');
+    const amountInput = document.getElementById('amountInput');
+    const submitBtn = document.getElementById('submitBtn');
+
+    // --- Functions ---
+    const showLoading = () => loadingOverlay.style.display = 'flex';
+    const hideLoading = () => loadingOverlay.style.display = 'none';
+
+    // Fetch data for Dashboard
+    const fetchData = async () => {
+      showLoading();
+      try {
+        const response = await fetch(GAS_URL);
+        const data = await response.json();
+        
+        lastMonthTotalEl.textContent = data.lastMonth.toLocaleString();
+        thisMonthTotalEl.textContent = data.thisMonth.toLocaleString();
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        alert('Failed to load data.');
+      } finally {
+        hideLoading();
+      }
+    };
+
+    // Submit new amount
+    const submitData = async (e) => {
+      e.preventDefault();
+      
+      const amount = amountInput.value.trim();
+      if (!amount) return;
+
+      // Prevent duplicate submission
+      submitBtn.disabled = true;
+      showLoading();
+
+      try {
+        // Using form-urlencoded to avoid CORS preflight issues with standard POST
+        const params = new URLSearchParams();
+        params.append('amount', amount);
+
+        await fetch(GAS_URL, {
+          method: 'POST',
+          body: params
+        });
+
+        // Reset form and reload dashboard (Returns to original page state)
+        gasForm.reset();
+        await fetchData();
+
+      } catch (error) {
+        console.error('Error submitting data:', error);
+        alert('Failed to submit data.');
+      } finally {
+        submitBtn.disabled = false;
+        hideLoading();
+      }
+    };
+
+    // --- Event Listeners ---
+    gasForm.addEventListener('submit', submitData);
+
+    // Initial Load
+    window.onload = fetchData;
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
